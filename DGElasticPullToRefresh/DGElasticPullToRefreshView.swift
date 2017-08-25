@@ -307,13 +307,13 @@ open class DGElasticPullToRefreshView: UIView {
     {
         guard let scrollView = scrollView() else { return }
         if (!self.observing) { return }
-        
-        
+
+
         resetScrollViewContentInset(shouldAddObserverWhenFinished: false, animated: false, completion: nil)
-        
+
         let centerY = DGElasticPullToRefreshConstants.LoadingContentInset
         let duration = 0.9
-        
+
         scrollView.isScrollEnabled = false
         startDisplayLink()
         scrollView.dg_removeObserver(self, forKeyPath: DGElasticPullToRefreshConstants.KeyPaths.ContentOffset)
@@ -326,22 +326,22 @@ open class DGElasticPullToRefreshView: UIView {
             self?.r1ControlPointView.center.y = centerY
             self?.r2ControlPointView.center.y = centerY
             self?.r3ControlPointView.center.y = centerY
-            }, completion: { [weak self] _ in
-                self?.stopDisplayLink()
-                self?.resetScrollViewContentInset(shouldAddObserverWhenFinished: true, animated: false, completion: nil)
-                if let strongSelf = self, let scrollView = strongSelf.scrollView() {
-                    scrollView.dg_addObserver(strongSelf, forKeyPath: DGElasticPullToRefreshConstants.KeyPaths.ContentOffset)
-                    scrollView.isScrollEnabled = true
-                }
-                self?.state = .loading
-            })
-        
+        }, completion: nil)
+
         bounceAnimationHelperView.center = CGPoint(x: 0.0, y: originalContentInsetTop + currentHeight())
-        UIView.animate(withDuration: duration * 0.4, animations: { [weak self] in
+        UIView.animate(withDuration: 0.2, animations: { [weak self] in
             if let contentInsetTop = self?.originalContentInsetTop {
                 self?.bounceAnimationHelperView.center = CGPoint(x: 0.0, y: contentInsetTop + DGElasticPullToRefreshConstants.LoadingContentInset)
             }
-            }, completion: nil)
+        }, completion: { [weak self] _ in
+            self?.stopDisplayLink()
+            self?.resetScrollViewContentInset(shouldAddObserverWhenFinished: true, animated: false, completion: nil)
+            if let strongSelf = self, let scrollView = strongSelf.scrollView() {
+                scrollView.dg_addObserver(strongSelf, forKeyPath: DGElasticPullToRefreshConstants.KeyPaths.ContentOffset)
+                scrollView.isScrollEnabled = true
+            }
+            self?.state = .loading
+        })
     }
     
     // MARK: -
@@ -396,13 +396,13 @@ open class DGElasticPullToRefreshView: UIView {
     
     override open func layoutSubviews() {
         super.layoutSubviews()
-        
+
         if let scrollView = scrollView() , state != .animatingBounce {
             let width = scrollView.bounds.width
             let height = currentHeight()
-            
+
             frame = CGRect(x: 0.0, y: -height, width: width, height: height)
-            
+
             if state.isAnyOf([.loading, .animatingToStopped]) {
                 cControlPointView.center = CGPoint(x: width / 2.0, y: height)
                 l1ControlPointView.center = CGPoint(x: 0.0, y: height)
@@ -412,31 +412,29 @@ open class DGElasticPullToRefreshView: UIView {
                 r2ControlPointView.center = CGPoint(x: width, y: height)
                 r3ControlPointView.center = CGPoint(x: width, y: height)
             } else {
-                let locationX = scrollView.panGestureRecognizer.location(in: scrollView).x
-                
+                let locationX = max(scrollView.frame.midX - scrollView.frame.width * 0.1, min(scrollView.frame.midX + scrollView.frame.width * 0.1, scrollView.panGestureRecognizer.location(in: scrollView).x))
                 let waveHeight = currentWaveHeight()
                 let baseHeight = bounds.height - waveHeight
-                
+
                 let minLeftX = min((locationX - width / 2.0) * 0.28, 0.0)
                 let maxRightX = max(width + (locationX - width / 2.0) * 0.28, width)
-                
+
                 let leftPartWidth = locationX - minLeftX
                 let rightPartWidth = maxRightX - locationX
-                
-                cControlPointView.center = CGPoint(x: locationX , y: baseHeight + waveHeight * 1.36)
+
+                cControlPointView.center = CGPoint(x: locationX , y: baseHeight + waveHeight)
                 l1ControlPointView.center = CGPoint(x: minLeftX + leftPartWidth * 0.71, y: baseHeight + waveHeight * 0.64)
-                l2ControlPointView.center = CGPoint(x: minLeftX + leftPartWidth * 0.44, y: baseHeight)
+                l2ControlPointView.center = CGPoint(x: minLeftX + leftPartWidth * 0.44, y: baseHeight + waveHeight * 0.32)
                 l3ControlPointView.center = CGPoint(x: minLeftX, y: baseHeight)
                 r1ControlPointView.center = CGPoint(x: maxRightX - rightPartWidth * 0.71, y: baseHeight + waveHeight * 0.64)
-                r2ControlPointView.center = CGPoint(x: maxRightX - (rightPartWidth * 0.44), y: baseHeight)
+                r2ControlPointView.center = CGPoint(x: maxRightX - (rightPartWidth * 0.44), y: baseHeight + waveHeight * 0.32)
                 r3ControlPointView.center = CGPoint(x: maxRightX, y: baseHeight)
             }
-            
+
             shapeLayer.frame = CGRect(x: 0.0, y: 0.0, width: width, height: height)
             shapeLayer.path = currentPath()
-            
+
             layoutLoadingView()
         }
     }
-    
 }
